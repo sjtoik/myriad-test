@@ -1,0 +1,16 @@
+{
+	"folders":
+	[
+		{
+			"path": "/keybase/private/sjtoik"
+		},
+		{
+			"path": "/home/sjtoik/Development"
+		}
+	],
+	
+	"settings": {
+        "python_virtualenv": "$project_path/../venvs/gnss",
+        "python_interpreter": "$project_path/../venvs/gnss/bin/python",
+    }
+}
