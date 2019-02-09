@@ -2,8 +2,6 @@ import SoapySDR
 from pyLMS7002Soapy import LMS7002
 from pyLMS7002Soapy.pyLMS7002Soapy import pyLMS7002Soapy
 
-import json
-
 
 if __name__ == '__main__':
     sdr = pyLMS7002Soapy(0)
