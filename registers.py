@@ -1,7 +1,6 @@
 import json
 import enum
 import SoapySDR
-import collections
 
 from pyLMS7002Soapy import pyLMS7002Soapy
 
@@ -13,9 +12,46 @@ def print_low_level(sdr):
             print(f'{bank.name}: {register.name}')
 
 
-def get_info(sdr):
+def get_soapy_info(pyLMS):
     """ pyLMS.sdr Soapy driver documentation:
     https://pothosware.github.io/SoapySDR/doxygen/latest/classSoapySDR_1_1Device.html """
+    info = {
+        'clock_sources': pyLMS.sdr.listClockSources(),
+        'GPIO_banks': pyLMS.sdr.listGPIOBanks(),
+        'register_interfaces': pyLMS.sdr.listRegisterInterfaces(),
+        'time_sources': pyLMS.sdr.listTimeSources(),
+        'sensors': {},
+        'UARTs': pyLMS.sdr.listUARTs(),
+    }
+
+    for sensor in pyLMS.sdr.listSensors():
+        info['sensors'][sensor] = pyLMS.sdr.readSensor(sensor)
+
+    for direction in Direction:
+        channel_count = pyLMS.sdr.getNumChannels(direction.value)
+        info[direction.name] = {}
+
+        for channel in range(channel_count):
+            info[direction.name][channel] = {
+                'sample_rates': pyLMS.sdr.listSampleRates(direction, channel),
+                'gains': {},
+                'gain_ranges': {},
+                'gain_is_auto': pyLMS.sdr.getGainMode(direction, channel),
+                'frequencies': {},
+                'bandwidths': pyLMS.sdr.listBandwidths(direction, channel),
+                'available_antennas': pyLMS.sdr.listAntennas(direction, channel),
+                'selected_antenna': pyLMS.sdr.getAntenna(direction, channel),
+            }
+
+            for gain in pyLMS.sdr.listGains(direction, channel):
+                info[direction.name][channel]['gains'][gain] = pyLMS.sdr.getGain(direction, channel, gain)
+                grange = pyLMS.sdr.getGainRange(direction, channel, gain)
+                info[direction.name][channel]['gain_ranges'][gain] = (grange.minimum(), grange.maximum())
+
+            for element in pyLMS.sdr.listFrequencies(direction, channel):
+                info[direction.name][channel]['frequencies'][element] = pyLMS.sdr.getFrequency(direction, channel, element)
+
+    return info
 
 
 class Direction(int, enum.Enum):
@@ -31,27 +67,5 @@ if __name__ == '__main__':
     for bank in banks:
         print(bank)
 
-    info = {
-        'clock_sources': pyLMS.sdr.listClockSources(),
-        'GPIO_banks': pyLMS.sdr.listGPIOBanks(),
-        'register_interfaces': pyLMS.sdr.listRegisterInterfaces(),
-        'time_sources': pyLMS.sdr.listTimeSources(),
-        'sensors': pyLMS.sdr.listSensors(),
-        'UARTs': pyLMS.sdr.listUARTs(),
-    }
+    print(f'LRST_RX_A: {pyLMS.LMS7002.CHIP.LRST_RX_A}')
 
-    for direction in Direction:
-        channel_count = pyLMS.sdr.getNumChannels(direction.value)
-        info[direction.name] = {}
-
-        for channel in range(channel_count):
-            info[direction.name][channel] = {
-                'tunable_elements': pyLMS.sdr.listFrequencies(direction, channel),
-                'sample_rates': pyLMS.sdr.listSampleRates(direction, channel),
-                'gains': pyLMS.sdr.listGains(direction, channel),
-                'frequencies': pyLMS.sdr.listFrequencies(direction, channel),
-                'bandwidths': pyLMS.sdr.listBandwidths(direction, channel),
-                'antennas': pyLMS.sdr.listAntennas(direction, channel),
-            }
-
-    print(json.dumps(info, indent=4))
